@@ -2,6 +2,11 @@ import moment from 'moment'
 import React from 'react'
 import { isSameDay, isDayDisabled, isSameUtcOffset } from './date_utils'
 
+function isFunction(functionToCheck) {
+ var getType = {};
+ return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+}
+
 var DateInput = React.createClass({
   displayName: 'DateInput',
 
@@ -10,7 +15,8 @@ var DateInput = React.createClass({
     date: React.PropTypes.object,
     dateFormat: React.PropTypes.oneOfType([
       React.PropTypes.string,
-      React.PropTypes.array
+      React.PropTypes.array,
+      React.PropTypes.func
     ]),
     disabled: React.PropTypes.bool,
     excludeDates: React.PropTypes.array,
@@ -62,7 +68,12 @@ var DateInput = React.createClass({
 
   handleChangeDate (value) {
     if (this.props.onChangeDate) {
-      var date = moment(value.trim(), this.props.dateFormat, this.props.locale || moment.locale(), true)
+      var date = null
+      if(isFunction(this.props.dateFormat)) {
+        date = this.props.dateFormat(value.trim(), this.props.locale)
+      } else {
+        date = moment(value.trim(), this.props.dateFormat, this.props.locale || moment.locale(), true)
+      }
       if (date.isValid() && !isDayDisabled(date, this.props)) {
         this.props.onChangeDate(date)
       } else if (value === '') {
@@ -73,7 +84,10 @@ var DateInput = React.createClass({
   },
 
   safeDateFormat (props) {
-    return props.date && props.date.clone()
+    if(isFunction(this.props.dateFormat)) {
+      return this.props.dateFormat(props.date && props.date.clone().locale(props.locale || moment.locale()), props.locale || moment.locale())
+    }
+    else return props.date && props.date.clone()
       .locale(props.locale || moment.locale())
       .format(Array.isArray(props.dateFormat) ? props.dateFormat[0] : props.dateFormat) || ''
   },

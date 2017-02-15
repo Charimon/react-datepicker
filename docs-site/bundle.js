@@ -198,8 +198,15 @@
 /* 4 */
 /***/ function(module, exports) {
 
+	/*
+	object-assign
+	(c) Sindre Sorhus
+	@license MIT
+	*/
+
 	'use strict';
 	/* eslint-disable no-unused-vars */
+	var getOwnPropertySymbols = Object.getOwnPropertySymbols;
 	var hasOwnProperty = Object.prototype.hasOwnProperty;
 	var propIsEnumerable = Object.prototype.propertyIsEnumerable;
 
@@ -220,7 +227,7 @@
 			// Detect buggy property enumeration order in older V8 versions.
 
 			// https://bugs.chromium.org/p/v8/issues/detail?id=4118
-			var test1 = new String('abc');  // eslint-disable-line
+			var test1 = new String('abc');  // eslint-disable-line no-new-wrappers
 			test1[5] = 'de';
 			if (Object.getOwnPropertyNames(test1)[0] === '5') {
 				return false;
@@ -249,7 +256,7 @@
 			}
 
 			return true;
-		} catch (e) {
+		} catch (err) {
 			// We don't expect any of the above to throw, but better to be safe.
 			return false;
 		}
@@ -269,8 +276,8 @@
 				}
 			}
 
-			if (Object.getOwnPropertySymbols) {
-				symbols = Object.getOwnPropertySymbols(from);
+			if (getOwnPropertySymbols) {
+				symbols = getOwnPropertySymbols(from);
 				for (var i = 0; i < symbols.length; i++) {
 					if (propIsEnumerable.call(from, symbols[i])) {
 						to[symbols[i]] = from[symbols[i]];
@@ -550,12 +557,18 @@
 	 * will remain to ensure logic does not differ in production.
 	 */
 
-	function invariant(condition, format, a, b, c, d, e, f) {
-	  if (false) {
+	var validateFormat = function validateFormat(format) {};
+
+	if (false) {
+	  validateFormat = function validateFormat(format) {
 	    if (format === undefined) {
 	      throw new Error('invariant requires an error message argument');
 	    }
-	  }
+	  };
+	}
+
+	function invariant(condition, format, a, b, c, d, e, f) {
+	  validateFormat(format);
 
 	  if (!condition) {
 	    var error;
@@ -37231,13 +37244,18 @@
 
 	function _objectWithoutProperties(obj, keys) { var target = {}; for (var i in obj) { if (keys.indexOf(i) >= 0) continue; if (!Object.prototype.hasOwnProperty.call(obj, i)) continue; target[i] = obj[i]; } return target; }
 
+	function isFunction(functionToCheck) {
+	  var getType = {};
+	  return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+	}
+
 	var DateInput = _react2.default.createClass({
 	  displayName: 'DateInput',
 
 	  propTypes: {
 	    customInput: _react2.default.PropTypes.element,
 	    date: _react2.default.PropTypes.object,
-	    dateFormat: _react2.default.PropTypes.oneOfType([_react2.default.PropTypes.string, _react2.default.PropTypes.array]),
+	    dateFormat: _react2.default.PropTypes.oneOfType([_react2.default.PropTypes.string, _react2.default.PropTypes.array, _react2.default.PropTypes.func]),
 	    disabled: _react2.default.PropTypes.bool,
 	    excludeDates: _react2.default.PropTypes.array,
 	    filterDate: _react2.default.PropTypes.func,
@@ -37281,7 +37299,12 @@
 	  },
 	  handleChangeDate: function handleChangeDate(value) {
 	    if (this.props.onChangeDate) {
-	      var date = (0, _moment2.default)(value.trim(), this.props.dateFormat, this.props.locale || _moment2.default.locale(), true);
+	      var date = null;
+	      if (isFunction(this.props.dateFormat)) {
+	        date = this.props.dateFormat(value.trim(), this.props.locale);
+	      } else {
+	        date = (0, _moment2.default)(value.trim(), this.props.dateFormat, this.props.locale || _moment2.default.locale(), true);
+	      }
 	      if (date.isValid() && !(0, _date_utils.isDayDisabled)(date, this.props)) {
 	        this.props.onChangeDate(date);
 	      } else if (value === '') {
@@ -37291,7 +37314,9 @@
 	    this.setState({ value: value });
 	  },
 	  safeDateFormat: function safeDateFormat(props) {
-	    return props.date && props.date.clone().locale(props.locale || _moment2.default.locale()).format(Array.isArray(props.dateFormat) ? props.dateFormat[0] : props.dateFormat) || '';
+	    if (isFunction(this.props.dateFormat)) {
+	      return this.props.dateFormat(props.date && props.date.clone().locale(props.locale || _moment2.default.locale()), props.locale || _moment2.default.locale());
+	    } else return props.date && props.date.clone().locale(props.locale || _moment2.default.locale()).format(Array.isArray(props.dateFormat) ? props.dateFormat[0] : props.dateFormat) || '';
 	  },
 	  handleBlur: function handleBlur(event) {
 	    this.setState({
